@@ -24,7 +24,7 @@ class TrackerTest extends TestCase
         $response = $this->actingAs($user)->getJson('/api/trackers');
 
         $response->assertOk()
-            ->assertJsonCount(2, 'data');
+            ->assertJsonCount(2);
     }
 
     /** Créer un tracker avec un IMEI unique */
@@ -38,7 +38,7 @@ class TrackerTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-            ->assertJson(['data' => ['imei' => '123456789012345']]);
+            ->assertJson(['imei' => '123456789012345']);
     }
 
     /** L'IMEI doit être unique */

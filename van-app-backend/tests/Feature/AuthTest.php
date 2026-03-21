@@ -90,7 +90,7 @@ class AuthTest extends TestCase
             ->getJson('/api/me');
 
         $response->assertOk()
-            ->assertJson(['data' => ['id' => $user->id, 'email' => $user->email]]);
+            ->assertJson(['id' => $user->id, 'email' => $user->email]);
     }
 
     /** Un utilisateur non connecté ne peut pas accéder à /me */

@@ -25,7 +25,7 @@ class LocationTest extends TestCase
         $response = $this->actingAs($user)->getJson("/api/trips/{$trip->id}/locations");
 
         $response->assertOk()
-            ->assertJsonCount(5, 'data');
+            ->assertJsonCount(5);
     }
 
     /** Ajouter un seul point GPS */

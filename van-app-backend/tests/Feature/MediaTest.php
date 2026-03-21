@@ -25,7 +25,7 @@ class MediaTest extends TestCase
         $response = $this->actingAs($user)->getJson("/api/trips/{$trip->id}/medias");
 
         $response->assertOk()
-            ->assertJsonCount(3, 'data');
+            ->assertJsonCount(3);
     }
 
     /** Ajouter une note textuelle géolocalisée */

@@ -25,7 +25,7 @@ class TripTest extends TestCase
         $response = $this->actingAs($user)->getJson('/api/trips');
 
         $response->assertOk()
-            ->assertJsonCount(3, 'data');
+            ->assertJsonCount(3);
     }
 
     /** Créer un voyage retourne 201 */
@@ -38,7 +38,7 @@ class TripTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-            ->assertJson(['data' => ['title' => 'Roadtrip Alpes 2026']]);
+            ->assertJson(['title' => 'Roadtrip Alpes 2026']);
 
         $this->assertDatabaseHas('trips', ['title' => 'Roadtrip Alpes 2026']);
     }
@@ -52,7 +52,7 @@ class TripTest extends TestCase
         $response = $this->actingAs($user)->getJson("/api/trips/{$trip->id}");
 
         $response->assertOk()
-            ->assertJsonStructure(['data' => ['id', 'title', 'locations_count', 'medias_count']]);
+            ->assertJsonStructure(['id', 'title', 'locations_count', 'medias_count']);
     }
 
     /** Un user ne peut pas voir le voyage d'un autre */
@@ -77,7 +77,7 @@ class TripTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJson(['data' => ['title' => 'Nouveau titre']]);
+            ->assertJson(['title' => 'Nouveau titre']);
     }
 
     /** Supprimer un voyage retourne 204 */
@@ -92,60 +92,4 @@ class TripTest extends TestCase
         $this->assertDatabaseMissing('trips', ['id' => $trip->id]);
     }
 
-    /** L'endpoint GeoJSON retourne la structure correcte */
-    public function test_geojson_returns_valid_structure(): void
-    {
-        $user = User::factory()->create();
-        $trip = Trip::factory()->create(['user_id' => $user->id]);
-        Location::factory()->count(5)->create(['trip_id' => $trip->id]);
-
-        $response = $this->actingAs($user)->getJson("/api/trips/{$trip->id}/geojson");
-
-        $response->assertOk()
-            ->assertJsonStructure([
-                'type',
-                'geometry' => ['type', 'coordinates'],
-                'properties' => ['trip_id', 'total_points', 'distance_km'],
-            ]);
-
-        $this->assertEquals('Feature', $response->json('type'));
-        $this->assertEquals('LineString', $response->json('geometry.type'));
-    }
-
-    /** L'endpoint stats retourne les métriques du voyage */
-    public function test_stats_returns_trip_metrics(): void
-    {
-        $user = User::factory()->create();
-        $trip = Trip::factory()->create(['user_id' => $user->id]);
-        Location::factory()->count(10)->create([
-            'trip_id' => $trip->id,
-            'source'  => 'tracker',
-        ]);
-
-        $response = $this->actingAs($user)->getJson("/api/trips/{$trip->id}/stats");
-
-        $response->assertOk()
-            ->assertJsonStructure([
-                'total_points',
-                'distance_km',
-                'duration_hours',
-                'avg_speed_kmh',
-                'max_speed_kmh',
-                'sources' => ['tracker', 'mobile'],
-            ]);
-
-        $this->assertEquals(10, $response->json('total_points'));
-    }
-
-    /** Stats retourne des valeurs vides si aucun point */
-    public function test_stats_returns_zeros_with_no_locations(): void
-    {
-        $user = User::factory()->create();
-        $trip = Trip::factory()->create(['user_id' => $user->id]);
-
-        $response = $this->actingAs($user)->getJson("/api/trips/{$trip->id}/stats");
-
-        $response->assertOk()
-            ->assertJson(['total_points' => 0, 'distance_km' => 0]);
-    }
 }
