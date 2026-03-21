@@ -1,0 +1,142 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
+import { getTrips, Trip } from '../services/tripService';
+import { useFocusEffect } from '@react-navigation/native';
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('fr-BE', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function statusLabel(status: string): { label: string; color: string } {
+  if (status === 'active') return { label: '🟢 En cours', color: '#34C759' };
+  if (status === 'completed') return { label: '✅ Terminé', color: '#8e8e93' };
+  return { label: status, color: '#8e8e93' };
+}
+
+function TripCard({ trip }: { trip: Trip }) {
+  const { label, color } = statusLabel(trip.status);
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{trip.title}</Text>
+        <Text style={[styles.statusBadge, { color }]}>{label}</Text>
+      </View>
+      <Text style={styles.cardDate}>📅 {formatDate(trip.start_date)}</Text>
+      {trip.end_date && (
+        <Text style={styles.cardDate}>🏁 {formatDate(trip.end_date)}</Text>
+      )}
+    </View>
+  );
+}
+
+export default function TripsScreen() {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadTrips = async () => {
+    try {
+      setError(null);
+      const data = await getTrips();
+      setTrips(data);
+    } catch {
+      setError('Impossible de charger les voyages.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Recharge la liste à chaque fois que l'onglet est affiché
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      loadTrips();
+    }, []),
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadTrips();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#007BFF" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Mes Voyages</Text>
+      {error && <Text style={styles.error}>{error}</Text>}
+      <FlatList
+        data={trips}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => <TripCard trip={item} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#007BFF" />}
+        contentContainerStyle={trips.length === 0 ? styles.empty : styles.list}
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Text style={styles.emptyEmoji}>🚐</Text>
+            <Text style={styles.emptyText}>Aucun voyage pour l'instant.</Text>
+            <Text style={styles.emptySubtext}>
+              Démarre ton premier voyage depuis la carte !
+            </Text>
+          </View>
+        }
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0f0f1a' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#ffffff',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+  },
+  list: { paddingHorizontal: 16, paddingBottom: 20 },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  card: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2a2a3e',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: '#fff', flex: 1 },
+  statusBadge: { fontSize: 13, fontWeight: '600', marginLeft: 8 },
+  cardDate: { fontSize: 14, color: '#8e8e93', marginTop: 4 },
+  error: { color: '#FF3B30', textAlign: 'center', marginBottom: 10 },
+  emptyEmoji: { fontSize: 52, marginBottom: 12 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 8 },
+  emptySubtext: { fontSize: 14, color: '#8e8e93', textAlign: 'center', paddingHorizontal: 40 },
+});
