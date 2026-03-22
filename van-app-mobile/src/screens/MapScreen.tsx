@@ -26,15 +26,27 @@ export default function MapScreen() {
 
   // 1. Au démarrage : demande la permission GPS et centre la carte
   useEffect(() => {
+    let isMounted = true;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission refusée pour accéder au GPS.');
-        return;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (isMounted) setErrorMsg('Permission refusee pour acceder au GPS.');
+          return;
+        }
+        
+        let currentLocation = await Location.getLastKnownPositionAsync({});
+        if (!currentLocation) {
+          currentLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+        }
+        if (isMounted && currentLocation) setLocation(currentLocation);
+      } catch (error: any) {
+        if (isMounted) setErrorMsg('Activez la localisation de votre appareil.');
       }
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation(currentLocation);
     })();
+    return () => { isMounted = false; };
   }, []);
 
   // 2. Gestion du tracking GPS + envoi vers le backend
@@ -95,25 +107,29 @@ export default function MapScreen() {
   };
 
   const stopTracking = async () => {
-    // Arrête la subscription GPS
-    if (locationSubscription.current) {
-      locationSubscription.current.remove();
-      locationSubscription.current = null;
-    }
-    // Arrête l'intervalle d'envoi
-    if (flushInterval.current) {
-      clearInterval(flushInterval.current);
-      flushInterval.current = null;
-    }
-    // Envoie les derniers points restants
-    await flushBuffer();
-    // Marque le voyage comme terminé
-    if (activeTrip.current) {
-      await updateTrip(activeTrip.current.id, {
-        status: 'completed',
-        end_date: new Date().toISOString(),
-      });
-      activeTrip.current = null;
+    try {
+      // Arrête la subscription GPS
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+        locationSubscription.current = null;
+      }
+      // Arrête l'intervalle d'envoi
+      if (flushInterval.current) {
+        clearInterval(flushInterval.current);
+        flushInterval.current = null;
+      }
+      // Envoie les derniers points restants
+      await flushBuffer();
+      // Marque le voyage comme terminé
+      if (activeTrip.current) {
+        await updateTrip(activeTrip.current.id, {
+          status: 'completed',
+          end_date: new Date().toISOString(),
+        });
+        activeTrip.current = null;
+      }
+    } catch (e) {
+      console.warn("Erreur lors de l'arret du voyage", e);
     }
   };
 

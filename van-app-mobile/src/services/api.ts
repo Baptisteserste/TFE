@@ -3,8 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 
 // ⚠️ En développement : l'IP 10.0.2.2 est l'alias Android pour localhost.
 // Sur un vrai téléphone physique, remplace par ton IP locale (ex: http://192.168.1.x:8000/api)
-// En production, remplace par ton URL Railway.
-export const API_BASE_URL = 'http://10.0.2.2:8000/api';
+// En production, on utilise la variable d'environnement
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

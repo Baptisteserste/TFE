@@ -21,13 +21,30 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.baptiste.serste.vanappmobile",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyC88a23WzZuUFXCWZA1366B2G-VSEDHtko"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow VanApp to use your location."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bab1b9e6-952b-4188-9822-00b3767926a6"
+      }
+    }
   }
 }
