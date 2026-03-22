@@ -22,3 +22,13 @@ Route::get('/db-test', function () {
         'host' => config('database.connections.' . config('database.default') . '.host'),
     ]);
 });
+
+Route::get('/storage-link', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('storage:link');
+        return response()->json(['message' => 'Lien symbolique storage cree !', 'output' => \Illuminate\Support\Facades\Artisan::output()]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()]);
+    }
+});
+

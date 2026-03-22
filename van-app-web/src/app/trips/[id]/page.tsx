@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { MapPin, Navigation, Compass, Crosshair } from "lucide-react";
+import { MapPin, Navigation, Compass, Crosshair, ImageIcon } from "lucide-react";
 import Link from "next/link";
-import { getLocations, LocationPoint } from "@/services/tripService";
+import { getLocations, getMedias, LocationPoint, Media } from "@/services/tripService";
 import { hasToken } from "@/services/authService";
 
 export default function TripDetailPage() {
@@ -13,6 +13,7 @@ export default function TripDetailPage() {
   const id = Number(params.id);
   
   const [locations, setLocations] = useState<LocationPoint[]>([]);
+  const [medias, setMedias] = useState<Media[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -21,11 +22,16 @@ export default function TripDetailPage() {
       return;
     }
     
-    getLocations(id)
-      .then(setLocations)
+    Promise.all([
+      getLocations(id).then(setLocations),
+      getMedias(id).then(setMedias)
+    ])
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [id, router]);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+  const BASE_URL = API_URL.replace('/api', '');
 
   const latestLocation = locations[locations.length - 1];
   
@@ -103,7 +109,7 @@ export default function TripDetailPage() {
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
           
           {/* FAKE MAP STYLING */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
             <Compass className="w-32 h-32 text-slate-800 mb-4 animate-[spin_10s_linear_infinite]" />
             <div className="text-slate-600 font-bold tracking-widest uppercase text-xl">Carte Réel Temps (Simulée)</div>
             {locations.length > 0 ? (
@@ -114,6 +120,56 @@ export default function TripDetailPage() {
               <div className="mt-4 text-slate-500 text-sm">Aucune donnée GPS pour le moment.</div>
             )}
           </div>
+
+          {/* GALERIE PHOTO (Carrousel horizontal overlay) */}
+          {medias.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 p-8 pt-32 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent z-20">
+              <div className="flex items-center gap-2 mb-4 drop-shadow-md">
+                <ImageIcon className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-lg font-bold text-white tracking-tight">Galerie du Voyage</h3>
+                <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full font-bold ml-2">
+                  {medias.length} {medias.length > 1 ? 'Photos' : 'Photo'}
+                </span>
+              </div>
+              
+              <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {medias.map((media) => (
+                  <div 
+                    key={media.id} 
+                    className="relative w-72 h-48 rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl flex-shrink-0 snap-start group bg-slate-900"
+                  >
+                    {media.image_path ? (
+                      <img 
+                        src={`${BASE_URL}/storage/${media.image_path}`} 
+                        alt={media.description || "Photo du voyage"} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
+                        <ImageIcon className="w-8 h-8 opacity-50" />
+                      </div>
+                    )}
+                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4 pointer-events-none">
+                      {media.description && (
+                        <p className="text-white text-sm font-semibold truncate shadow-black drop-shadow-md">
+                          {media.description}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-wider shadow-black drop-shadow-md">
+                          {new Date(media.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </p>
+                        <p className="text-slate-400 text-[10px]">
+                          Lat: {media.latitude.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

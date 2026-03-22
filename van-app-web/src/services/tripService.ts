@@ -42,3 +42,19 @@ export async function getLocations(tripId: number): Promise<LocationPoint[]> {
   const { data } = await api.get<LocationPoint[]>(`/trips/${tripId}/locations`);
   return data;
 }
+
+export interface Media {
+  id: number;
+  trip_id: number;
+  type: string;
+  description: string | null;
+  latitude: number;
+  longitude: number;
+  image_path: string | null;
+  created_at: string;
+}
+
+export async function getMedias(tripId: number): Promise<Media[]> {
+  const { data } = await api.get<Media[]>(`/trips/${tripId}/medias`);
+  return data;
+}

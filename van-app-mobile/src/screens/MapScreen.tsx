@@ -11,13 +11,14 @@ import {
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { createTrip, updateTrip, sendLocationBatch, uploadMedia, Trip, LocationPoint } from '../services/tripService';
+import { createTrip, updateTrip, sendLocationBatch, uploadMedia, getMedias, Trip, LocationPoint, Media } from '../services/tripService';
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
+  const [photoMarkers, setPhotoMarkers] = useState<Media[]>([]);
 
   // Références pour le voyage actif et le buffer GPS
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -167,12 +168,16 @@ export default function MapScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         Alert.alert('Envoi en cours', 'Photo en cours de transfert vers Railway...');
-        await uploadMedia(
+        const uploaded = await uploadMedia(
           activeTrip.current.id, 
           result.assets[0].uri, 
           location.coords.latitude, 
           location.coords.longitude
         );
+        // Ajoute la photo comme marqueur sur la carte
+        if (uploaded) {
+          setPhotoMarkers(prev => [...prev, uploaded]);
+        }
         Alert.alert('Succes', 'Photo integree a votre carnet !');
       }
     } catch (e: any) {
@@ -215,6 +220,16 @@ export default function MapScreen() {
           }}
           title="Mon Van"
         />
+        {/* Marqueurs photo */}
+        {photoMarkers.map((photo) => (
+          <Marker
+            key={photo.id}
+            coordinate={{ latitude: photo.latitude, longitude: photo.longitude }}
+            title="📸 Photo"
+            description={photo.description || new Date(photo.created_at).toLocaleTimeString('fr-FR')}
+            pinColor="#34C759"
+          />
+        ))}
       </MapView>
 
       {/* Indicateur de voyage actif */}

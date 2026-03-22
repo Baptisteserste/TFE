@@ -17,6 +17,17 @@ export interface LocationPoint {
   source?: 'mobile' | 'tracker';
 }
 
+export interface Media {
+  id: number;
+  trip_id: number;
+  type: string;
+  description: string | null;
+  latitude: number;
+  longitude: number;
+  image_path: string | null;
+  created_at: string;
+}
+
 /**
  * Récupère la liste de tous les voyages de l'utilisateur.
  */
@@ -71,6 +82,14 @@ export async function getLocations(tripId: number): Promise<LocationPoint[]> {
  */
 export async function deleteTrip(tripId: number): Promise<void> {
   await api.delete(`/trips/${tripId}`);
+}
+
+/**
+ * Récupère les médias d'un voyage.
+ */
+export async function getMedias(tripId: number): Promise<Media[]> {
+  const { data } = await api.get<Media[]>(`/trips/${tripId}/medias`);
+  return data;
 }
 
 /**
