@@ -10,7 +10,9 @@ import {
   Alert,
 } from 'react-native';
 import { getTrips, deleteTrip, Trip } from '../services/tripService';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from './TripDetailScreen';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('fr-BE', {
@@ -26,7 +28,7 @@ function statusLabel(status: string): { label: string; color: string } {
   return { label: status, color: '#8e8e93' };
 }
 
-function TripCard({ trip, onDelete }: { trip: Trip; onDelete: (id: number) => void }) {
+function TripCard({ trip, onDelete, onPress }: { trip: Trip; onDelete: (id: number) => void; onPress: (trip: Trip) => void }) {
   const { label, color } = statusLabel(trip.status);
 
   const confirmDelete = () => {
@@ -41,7 +43,7 @@ function TripCard({ trip, onDelete }: { trip: Trip; onDelete: (id: number) => vo
   };
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={() => onPress(trip)} activeOpacity={0.8}>
       <View style={styles.cardHeader}>
         <View style={styles.cardTitleContainer}>
           <Text style={styles.cardTitle}>{trip.title}</Text>
@@ -55,7 +57,7 @@ function TripCard({ trip, onDelete }: { trip: Trip; onDelete: (id: number) => vo
       {trip.end_date && (
         <Text style={styles.cardDate}>🏁 {formatDate(trip.end_date)}</Text>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -64,6 +66,11 @@ export default function TripsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const handleOpenTrip = (trip: Trip) => {
+    navigation.navigate('TripDetail', { trip });
+  };
 
   const loadTrips = async () => {
     try {
@@ -116,7 +123,7 @@ export default function TripsScreen() {
       <FlatList
         data={trips}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <TripCard trip={item} onDelete={handleDelete} />}
+        renderItem={({ item }) => <TripCard trip={item} onDelete={handleDelete} onPress={handleOpenTrip} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#007BFF" />}
         contentContainerStyle={trips.length === 0 ? styles.empty : styles.list}
         ListEmptyComponent={
