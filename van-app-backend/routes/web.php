@@ -14,3 +14,11 @@ Route::get('/migrate-db', function () {
         return response()->json(['error' => $e->getMessage()]);
     }
 });
+
+Route::get('/db-test', function () {
+    return response()->json([
+        'connection' => config('database.default'),
+        'database' => config('database.connections.' . config('database.default') . '.database'),
+        'host' => config('database.connections.' . config('database.default') . '.host'),
+    ]);
+});
