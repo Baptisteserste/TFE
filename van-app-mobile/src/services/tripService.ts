@@ -65,3 +65,10 @@ export async function getLocations(tripId: number): Promise<LocationPoint[]> {
   const { data } = await api.get<LocationPoint[]>(`/trips/${tripId}/locations`);
   return data;
 }
+
+/**
+ * Supprime un voyage.
+ */
+export async function deleteTrip(tripId: number): Promise<void> {
+  await api.delete(`/trips/${tripId}`);
+}
