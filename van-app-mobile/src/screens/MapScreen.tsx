@@ -9,8 +9,9 @@ import {
   Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { createTrip, updateTrip, sendLocationBatch, Trip, LocationPoint } from '../services/tripService';
+import { createTrip, updateTrip, sendLocationBatch, uploadMedia, Trip, LocationPoint } from '../services/tripService';
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -148,6 +149,37 @@ export default function MapScreen() {
 
   const toggleTracking = () => setIsTracking((prev) => !prev);
 
+  const handleTakePhoto = async () => {
+    if (!activeTrip.current || !location) return;
+
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission requise', "L'acces a l'appareil photo est necessaire.");
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        Alert.alert('Envoi en cours', 'Photo en cours de transfert vers Railway...');
+        await uploadMedia(
+          activeTrip.current.id, 
+          result.assets[0].uri, 
+          location.coords.latitude, 
+          location.coords.longitude
+        );
+        Alert.alert('Succes', 'Photo integree a votre carnet !');
+      }
+    } catch (e: any) {
+      Alert.alert('Erreur', "Impossible denvoyer la photo : " + e.message);
+    }
+  };
+
   if (!location) {
     return (
       <View style={styles.centered}>
@@ -193,6 +225,15 @@ export default function MapScreen() {
           </Text>
         </View>
       )}
+
+      {/* Floating Action Button pour la photo */}
+      <View style={styles.floatingButtonsContainer}>
+        {isTracking && activeTrip.current && (
+          <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
+            <Text style={styles.photoIcon}>📸</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       <View style={styles.uiContainer}>
         <TouchableOpacity
@@ -246,4 +287,24 @@ const styles = StyleSheet.create({
   buttonStart: { backgroundColor: '#007BFF' },
   buttonStop: { backgroundColor: '#FF3B30' },
   buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  floatingButtonsContainer: {
+    position: 'absolute',
+    right: 20,
+    bottom: 120,
+    alignItems: 'flex-end',
+  },
+  photoButton: {
+    backgroundColor: '#34C759',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  photoIcon: { fontSize: 26 },
 });

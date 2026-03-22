@@ -72,3 +72,34 @@ export async function getLocations(tripId: number): Promise<LocationPoint[]> {
 export async function deleteTrip(tripId: number): Promise<void> {
   await api.delete(`/trips/${tripId}`);
 }
+
+/**
+ * Uploade une photo pour un voyage
+ */
+export async function uploadMedia(tripId: number, uri: string, latitude: number, longitude: number, description?: string): Promise<any> {
+  const formData = new FormData();
+
+  const filename = uri.split('/').pop() || `photo_${Date.now()}.jpg`;
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : `image`;
+
+  // Astuce TypeScript pour react-native FormData
+  formData.append('image', {
+    uri,
+    name: filename,
+    type,
+  } as any);
+
+  formData.append('latitude', latitude.toString());
+  formData.append('longitude', longitude.toString());
+  if (description) {
+    formData.append('description', description);
+  }
+
+  const { data } = await api.post(`/trips/${tripId}/medias`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return data;
+}

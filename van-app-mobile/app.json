@@ -39,6 +39,13 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow VanApp to use your location."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow VanApp to access your photos.",
+          "cameraPermission": "Allow VanApp to access your camera."
+        }
       ]
     ],
     "extra": {
