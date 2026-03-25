@@ -98,7 +98,25 @@ export default function TripDetailPage() {
               </div>
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
+            {locations.length > 0 && (
+              <button
+                onClick={() => {
+                  const pts = locations.map(l =>
+                    `  <trkpt lat="${l.latitude}" lon="${l.longitude}">\n    <time>${l.timestamp}</time>\n  </trkpt>`
+                  ).join('\n');
+                  const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="VanApp" xmlns="http://www.topografix.com/GPX/1/1">\n  <trk><name>Voyage #${id}</name><trkseg>\n${pts}\n  </trkseg></trk>\n</gpx>`;
+                  const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url; a.download = `vanapp_voyage_${id}.gpx`; a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="text-sm px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-semibold flex items-center gap-2"
+              >
+                📤 Export GPX
+              </button>
+            )}
             <Link href="/profile" className="text-sm px-4 py-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-lg transition-colors font-medium">Profil</Link>
           </div>
         </div>

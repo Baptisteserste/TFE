@@ -15,6 +15,26 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getLocations, getMedias, updateTrip, LocationPoint, Media, Trip } from '../services/tripService';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+
+function generateGpx(trip: Trip, locations: LocationPoint[]): string {
+  const points = locations.map(l =>
+    `  <trkpt lat="${l.latitude}" lon="${l.longitude}">
+    <time>${l.timestamp}</time>${l.speed != null ? `\n    <speed>${l.speed.toFixed(2)}</speed>` : ''}
+  </trkpt>`
+  ).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="VanApp" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>${trip.title}</name><time>${trip.start_date}</time></metadata>
+  <trk>
+    <name>${trip.title}</name>
+    <trkseg>
+${points}
+    </trkseg>
+  </trk>
+</gpx>`;
+}
 
 // Types de navigation
 export type RootStackParamList = {
@@ -127,6 +147,23 @@ export default function TripDetailScreen() {
     );
   };
 
+  const handleExportGpx = async () => {
+    if (locations.length === 0) {
+      Alert.alert('Aucun point GPS', 'Ce voyage ne contient pas encore de points GPS.');
+      return;
+    }
+    try {
+      const gpxContent = generateGpx(trip, locations);
+      const filename = `vanapp_${trip.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
+      const fs = FileSystem as any;
+      const fileUri = (fs.cacheDirectory ?? fs.documentDirectory ?? '') + filename;
+      await FileSystem.writeAsStringAsync(fileUri, gpxContent, { encoding: 'utf8' });
+      await Sharing.shareAsync(fileUri, { mimeType: 'application/gpx+xml', dialogTitle: 'Exporter le tracé GPX' });
+    } catch {
+      Alert.alert('Erreur', "Impossible d'exporter le fichier GPX.");
+    }
+  };
+
   useEffect(() => {
     Promise.all([
       getLocations(trip.id).then(setLocations),
@@ -182,6 +219,9 @@ export default function TripDetailScreen() {
             <Text style={styles.completeButtonText}>🏁 Terminer</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity style={styles.exportButton} onPress={handleExportGpx}>
+          <Text style={styles.exportButtonText}>📤</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Stats */}
@@ -351,6 +391,13 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   completeButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  exportButton: {
+    padding: 8,
+    backgroundColor: '#2a2a3e',
+    borderRadius: 8,
+    marginLeft: 6,
+  },
+  exportButtonText: { fontSize: 16 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
