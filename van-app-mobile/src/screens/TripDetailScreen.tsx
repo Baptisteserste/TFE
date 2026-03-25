@@ -52,9 +52,10 @@ export default function TripDetailScreen() {
           onPress: async () => {
             setCompleting(true);
             try {
+              const dateStr = new Date().toISOString().split('T')[0];
               await updateTrip(trip.id, {
                 status: 'completed',
-                end_date: new Date().toISOString(),
+                end_date: dateStr,
               });
               setTripStatus('completed');
             } catch {

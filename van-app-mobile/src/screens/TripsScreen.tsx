@@ -104,10 +104,12 @@ export default function TripsScreen() {
 
   const handleStop = async (id: number) => {
     try {
-      await updateTrip(id, { status: 'completed', end_date: new Date().toISOString() });
-      setTrips((prev) => prev.map((t) => t.id === id ? { ...t, status: 'completed', end_date: new Date().toISOString() } : t));
-    } catch {
-      Alert.alert('Erreur', 'Impossible de terminer ce voyage.');
+      const dateStr = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+      await updateTrip(id, { status: 'completed', end_date: dateStr });
+      setTrips((prev) => prev.map((t) => t.id === id ? { ...t, status: 'completed', end_date: dateStr } : t));
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.message || 'Erreur inconnue';
+      Alert.alert('Erreur', 'Impossible de terminer ce voyage : ' + msg);
     }
   };
 
