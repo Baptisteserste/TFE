@@ -13,9 +13,52 @@ import {
   Platform,
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { createTrip, updateTrip, sendLocationBatch, uploadMedia, getMedias, Trip, LocationPoint, Media } from '../services/tripService';
+
+const BACKGROUND_LOCATION_TASK = 'VANAPP_BACKGROUND_LOCATION';
+
+// Stockage partagé entre la tâche de fond et le composant
+let _backgroundBuffer: LocationPoint[] = [];
+let _backgroundTripId: number | null = null;
+let _backgroundFlushTimeout: ReturnType<typeof setTimeout> | null = null;
+
+// Envoie les points GPS en batch et vide le buffer
+async function flushBackgroundBuffer() {
+  if (!_backgroundTripId || _backgroundBuffer.length === 0) return;
+  const points = [..._backgroundBuffer];
+  _backgroundBuffer = [];
+  try {
+    await sendLocationBatch(_backgroundTripId, points);
+  } catch {
+    _backgroundBuffer = [...points, ..._backgroundBuffer];
+  }
+}
+
+// Définition de la tâche de fond (doit être au top-level du module)
+TaskManager.defineTask(BACKGROUND_LOCATION_TASK, ({ data, error }: any) => {
+  if (error) return;
+  if (data?.locations) {
+    for (const loc of data.locations) {
+      _backgroundBuffer.push({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        speed: loc.coords.speed ?? undefined,
+        timestamp: new Date(loc.timestamp).toISOString(),
+        source: 'mobile',
+      });
+    }
+    // Flush toutes les 15 secondes
+    if (!_backgroundFlushTimeout) {
+      _backgroundFlushTimeout = setTimeout(() => {
+        flushBackgroundBuffer();
+        _backgroundFlushTimeout = null;
+      }, 15000);
+    }
+  }
+});
 
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -32,17 +75,19 @@ export default function MapScreen() {
   const locationBuffer = useRef<LocationPoint[]>([]);
   const flushInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // 1. Au démarrage : demande la permission GPS et centre la carte
+  // 1. Au démarrage : demande permission GPS (avant + arrière-plan) et centre la carte
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          if (isMounted) setErrorMsg('Permission refusee pour acceder au GPS.');
+        const { status: fg } = await Location.requestForegroundPermissionsAsync();
+        if (fg !== 'granted') {
+          if (isMounted) setErrorMsg('Permission GPS refusée.');
           return;
         }
-        
+        // Demande la permission arrière-plan
+        await Location.requestBackgroundPermissionsAsync();
+
         let currentLocation = await Location.getLastKnownPositionAsync({});
         if (!currentLocation) {
           currentLocation = await Location.getCurrentPositionAsync({
@@ -50,7 +95,7 @@ export default function MapScreen() {
           });
         }
         if (isMounted && currentLocation) setLocation(currentLocation);
-      } catch (error: any) {
+      } catch {
         if (isMounted) setErrorMsg('Activez la localisation de votre appareil.');
       }
     })();
@@ -72,18 +117,16 @@ export default function MapScreen() {
 
   const startTracking = async () => {
     try {
-      // Crée un nouveau voyage sur le backend
       const trip = await createTrip(`Voyage du ${new Date().toLocaleDateString('fr-BE')}`);
       activeTrip.current = trip;
+      _backgroundTripId = trip.id;
+      _backgroundBuffer = [];
       setRouteCoordinates([]);
-      locationBuffer.current = [];
 
-      // Envoi des points GPS en batch toutes les 10 secondes
-      flushInterval.current = setInterval(() => {
-        flushBuffer();
-      }, 10000);
+      // Flush batch toutes les 10 secondes côté foreground
+      flushInterval.current = setInterval(flushBackgroundBuffer, 10000);
 
-      // Écoute la position GPS
+      // Démarrage du tracking en avant-plan (pour la carte live)
       locationSubscription.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
@@ -91,23 +134,27 @@ export default function MapScreen() {
           distanceInterval: 2,
         },
         (newLocation) => {
-          const coord = {
-            latitude: newLocation.coords.latitude,
-            longitude: newLocation.coords.longitude,
-          };
           setLocation(newLocation);
-          setRouteCoordinates((prev) => [...prev, coord]);
-
-          // Ajoute au buffer pour l'envoi batch
-          locationBuffer.current.push({
+          setRouteCoordinates((prev) => [...prev, {
             latitude: newLocation.coords.latitude,
             longitude: newLocation.coords.longitude,
-            speed: newLocation.coords.speed ?? undefined,
-            timestamp: new Date(newLocation.timestamp).toISOString(),
-            source: 'mobile',
-          });
+          }]);
         },
       );
+
+      // Démarrage du tracking en arrière-plan
+      await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 5000,
+        distanceInterval: 5,
+        foregroundService: {
+          notificationTitle: '🚐 VanApp — Voyage en cours',
+          notificationBody: 'Votre trajet est enregistré en arrière-plan.',
+          notificationColor: '#007BFF',
+        },
+        pausesUpdatesAutomatically: false,
+        showsBackgroundLocationIndicator: true,
+      });
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de démarrer le voyage. Vérifie ta connexion.');
       setIsTracking(false);
@@ -116,42 +163,36 @@ export default function MapScreen() {
 
   const stopTracking = async () => {
     try {
-      // Arrête la subscription GPS
       if (locationSubscription.current) {
         locationSubscription.current.remove();
         locationSubscription.current = null;
       }
-      // Arrête l'intervalle d'envoi
       if (flushInterval.current) {
         clearInterval(flushInterval.current);
         flushInterval.current = null;
       }
+      // Arrête la tâche de fond
+      const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      if (isRunning) {
+        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      }
       // Envoie les derniers points restants
-      await flushBuffer();
-      // Marque le voyage comme terminé
+      await flushBackgroundBuffer();
+      _backgroundTripId = null;
       if (activeTrip.current) {
         await updateTrip(activeTrip.current.id, {
           status: 'completed',
-          end_date: new Date().toISOString(),
+          end_date: new Date().toISOString().split('T')[0],
         });
         activeTrip.current = null;
       }
     } catch (e) {
-      console.warn("Erreur lors de l'arret du voyage", e);
+      console.warn("Erreur lors de l'arrêt du voyage", e);
     }
   };
 
-  // Envoie le buffer de points GPS au backend
   const flushBuffer = async () => {
-    if (!activeTrip.current || locationBuffer.current.length === 0) return;
-    const points = [...locationBuffer.current];
-    locationBuffer.current = [];
-    try {
-      await sendLocationBatch(activeTrip.current.id, points);
-    } catch {
-      // Si l'envoi échoue, on remet les points dans le buffer
-      locationBuffer.current = [...points, ...locationBuffer.current];
-    }
+    await flushBackgroundBuffer();
   };
 
   const toggleTracking = () => setIsTracking((prev) => !prev);
