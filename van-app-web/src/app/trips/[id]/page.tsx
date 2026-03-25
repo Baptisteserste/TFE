@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { MapPin, Navigation, ImageIcon, Camera, Clock } from "lucide-react";
+import { MapPin, Navigation, ImageIcon, Camera, Clock, Ruler, Timer, Gauge } from "lucide-react";
 import Link from "next/link";
 import { getLocations, getMedias, LocationPoint, Media } from "@/services/tripService";
 import { hasToken } from "@/services/authService";
@@ -19,6 +19,32 @@ const TripMap = dynamic(() => import("@/components/TripMap"), {
     </div>
   ),
 });
+
+// Formule de Haversine
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function computeStats(locs: LocationPoint[]) {
+  if (locs.length < 2) return { distanceKm: 0, durationMin: 0, avgSpeedKmh: 0 };
+  let d = 0;
+  for (let i = 1; i < locs.length; i++) d += haversineKm(locs[i-1].latitude, locs[i-1].longitude, locs[i].latitude, locs[i].longitude);
+  const start = new Date(locs[0].timestamp).getTime();
+  const end = new Date(locs[locs.length-1].timestamp).getTime();
+  const durationMin = Math.round((end - start) / 60000);
+  const avgSpeedKmh = durationMin > 0 ? Math.round((d / durationMin) * 60) : 0;
+  return { distanceKm: Math.round(d * 10) / 10, durationMin, avgSpeedKmh };
+}
+
+function fmtDuration(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
+}
 
 export default function TripDetailPage() {
   const router = useRouter();
@@ -50,6 +76,7 @@ export default function TripDetailPage() {
   const latestLocation = locations[locations.length - 1];
   const photos = medias.filter(m => m.image_path);
   const notes = medias.filter(m => !m.image_path && m.description);
+  const stats = computeStats(locations);
   
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-slate-50 overflow-hidden">
@@ -84,20 +111,31 @@ export default function TripDetailPage() {
           
           {/* Stats */}
           <div className="p-4 border-b border-slate-800 grid grid-cols-2 gap-3">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
-              <div className="p-1.5 bg-indigo-500/10 text-indigo-400 rounded-lg"><MapPin className="w-4 h-4"/></div>
+            {/* Distance */}
+            <div className="col-span-2 bg-gradient-to-r from-indigo-500/10 to-violet-500/10 border border-indigo-500/20 rounded-xl p-3 flex items-center gap-3">
+              <div className="p-1.5 bg-indigo-500/20 text-indigo-300 rounded-lg"><Ruler className="w-5 h-5"/></div>
               <div>
-                <div className="text-xs text-slate-400">Points GPS</div>
-                <div className="font-bold">{locations.length}</div>
+                <div className="text-xs text-slate-400">Distance totale</div>
+                <div className="font-black text-xl text-white">{isLoading ? '…' : stats.distanceKm} <span className="text-sm text-slate-400 font-normal">km</span></div>
               </div>
             </div>
+            {/* Durée */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
-              <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg"><Navigation className="w-4 h-4"/></div>
+              <div className="p-1.5 bg-amber-500/10 text-amber-400 rounded-lg"><Timer className="w-4 h-4"/></div>
               <div>
-                <div className="text-xs text-slate-400">Vitesse</div>
-                <div className="font-bold">{latestLocation?.speed ? Math.round(latestLocation.speed * 3.6) : '--'} <span className="text-xs text-slate-500 font-normal">km/h</span></div>
+                <div className="text-xs text-slate-400">Durée</div>
+                <div className="font-bold">{isLoading ? '…' : fmtDuration(stats.durationMin)}</div>
               </div>
             </div>
+            {/* Vitesse moy */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+              <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg"><Gauge className="w-4 h-4"/></div>
+              <div>
+                <div className="text-xs text-slate-400">Vitesse moy.</div>
+                <div className="font-bold">{isLoading ? '…' : stats.avgSpeedKmh} <span className="text-xs text-slate-500 font-normal">km/h</span></div>
+              </div>
+            </div>
+            {/* Photos */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
               <div className="p-1.5 bg-rose-500/10 text-rose-400 rounded-lg"><Camera className="w-4 h-4"/></div>
               <div>
@@ -105,6 +143,7 @@ export default function TripDetailPage() {
                 <div className="font-bold">{photos.length}</div>
               </div>
             </div>
+            {/* Notes */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
               <div className="p-1.5 bg-violet-500/10 text-violet-400 rounded-lg"><ImageIcon className="w-4 h-4"/></div>
               <div>
@@ -113,6 +152,7 @@ export default function TripDetailPage() {
               </div>
             </div>
           </div>
+
 
           {/* Tabs */}
           <div className="flex border-b border-slate-800">
