@@ -80,9 +80,9 @@ export default function MapScreen() {
       // Écoute la position GPS
       locationSubscription.current = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 2000,
-          distanceInterval: 5,
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000,
+          distanceInterval: 2,
         },
         (newLocation) => {
           const coord = {
