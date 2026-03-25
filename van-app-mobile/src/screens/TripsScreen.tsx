@@ -147,7 +147,7 @@ export default function TripsScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filterRow}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
       >
         {(['all', 'active', 'completed'] as const).map(f => (
           <TouchableOpacity
