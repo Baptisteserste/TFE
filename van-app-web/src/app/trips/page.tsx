@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import { MapPin, Calendar, ChevronRight, Compass, Ruler, Camera, Globe, Zap, Map } from "lucide-react";
 import { getTrips, getLocations, Trip, LocationPoint } from "@/services/tripService";
@@ -59,8 +60,9 @@ export default function TripsPage() {
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl text-indigo-400">
-            <Compass className="w-6 h-6" /> VanApp
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/icon.png" alt="VanApp" width={36} height={36} className="rounded-xl" />
+            <span className="font-bold text-xl text-indigo-400">VanApp</span>
           </Link>
           <div className="flex gap-4">
             <Link href="/profile" className="text-slate-400 hover:text-white font-medium transition-colors">Profil</Link>

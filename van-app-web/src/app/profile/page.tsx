@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { User, Settings, LogOut, Map, Shield, Bell, Globe, Lock, Smartphone, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { getMe, logout, hasToken, type User as UserType } from "@/services/authService";
 import { getTrips } from "@/services/tripService";
 
@@ -53,7 +54,10 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl text-indigo-400">VanApp</Link>
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/icon.png" alt="VanApp" width={36} height={36} className="rounded-xl" />
+            <span className="font-bold text-xl text-indigo-400">VanApp</span>
+          </Link>
           <div className="flex gap-4">
             <Link href="/trips" className="text-slate-400 hover:text-white font-medium transition-colors">Trajets</Link>
           </div>
