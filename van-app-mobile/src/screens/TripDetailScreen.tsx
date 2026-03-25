@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { getLocations, getMedias, LocationPoint, Media, Trip } from '../services/tripService';
+import { getLocations, getMedias, updateTrip, LocationPoint, Media, Trip } from '../services/tripService';
 
 // Types de navigation
 export type RootStackParamList = {
@@ -36,7 +37,36 @@ export default function TripDetailScreen() {
   const [locations, setLocations] = useState<LocationPoint[]>([]);
   const [medias, setMedias] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tripStatus, setTripStatus] = useState(trip.status);
+  const [completing, setCompleting] = useState(false);
   const mapRef = useRef<MapView>(null);
+
+  const handleComplete = () => {
+    Alert.alert(
+      'Terminer le voyage',
+      'Marquer ce voyage comme terminé ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Terminer', style: 'destructive',
+          onPress: async () => {
+            setCompleting(true);
+            try {
+              await updateTrip(trip.id, {
+                status: 'completed',
+                end_date: new Date().toISOString(),
+              });
+              setTripStatus('completed');
+            } catch {
+              Alert.alert('Erreur', 'Impossible de terminer ce voyage.');
+            } finally {
+              setCompleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     Promise.all([
@@ -73,9 +103,20 @@ export default function TripDetailScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>{trip.title}</Text>
           <Text style={styles.headerSub}>
             📅 {formatDate(trip.start_date)}
-            {trip.end_date ? `  🏁 ${formatDate(trip.end_date)}` : '  🟢 En cours'}
+            {tripStatus === 'completed'
+              ? (trip.end_date ? `  🏁 ${formatDate(trip.end_date)}` : '  ✅ Terminé')
+              : '  🟢 En cours'}
           </Text>
         </View>
+        {tripStatus === 'active' && (
+          <TouchableOpacity
+            style={[styles.completeButton, completing && { opacity: 0.5 }]}
+            onPress={handleComplete}
+            disabled={completing}
+          >
+            <Text style={styles.completeButtonText}>🏁 Terminer</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Stats */}
@@ -195,6 +236,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: { color: '#8e8e93', marginTop: 12, fontSize: 15 },
+  completeButton: {
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  completeButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   emptyOverlay: {
     position: 'absolute',
     bottom: 60,
