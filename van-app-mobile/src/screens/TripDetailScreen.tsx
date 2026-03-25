@@ -29,6 +29,48 @@ function formatDate(dateStr: string): string {
   });
 }
 
+/** Formule de Haversine : distance en km entre deux coordonnées GPS */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function computeStats(locations: LocationPoint[], trip: Trip) {
+  if (locations.length < 2) return { distanceKm: 0, durationMin: 0, avgSpeedKmh: 0 };
+
+  // Distance totale
+  let distanceKm = 0;
+  for (let i = 1; i < locations.length; i++) {
+    distanceKm += haversineKm(
+      locations[i - 1].latitude, locations[i - 1].longitude,
+      locations[i].latitude, locations[i].longitude,
+    );
+  }
+
+  // Durée en minutes
+  const start = new Date(locations[0].timestamp).getTime();
+  const end = new Date(locations[locations.length - 1].timestamp).getTime();
+  const durationMin = Math.round((end - start) / 60000);
+
+  // Vitesse moyenne (km/h)
+  const avgSpeedKmh = durationMin > 0 ? Math.round((distanceKm / durationMin) * 60) : 0;
+
+  return { distanceKm: Math.round(distanceKm * 10) / 10, durationMin, avgSpeedKmh };
+}
+
+function formatDuration(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${h}h`;
+}
+
 export default function TripDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<TripDetailRouteProp>();
@@ -92,6 +134,7 @@ export default function TripDetailScreen() {
   const routeCoords = locations.map(l => ({ latitude: l.latitude, longitude: l.longitude }));
   const firstCoord = routeCoords[0];
   const lastCoord = routeCoords[routeCoords.length - 1];
+  const stats = computeStats(locations, trip);
 
   return (
     <View style={styles.container}>
@@ -123,8 +166,24 @@ export default function TripDetailScreen() {
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.statBlock}>
-          <Text style={styles.statValue}>{locations.length}</Text>
-          <Text style={styles.statLabel}>Points GPS</Text>
+          <Text style={styles.statValue}>
+            {loading ? '--' : `${stats.distanceKm}`}
+          </Text>
+          <Text style={styles.statLabel}>km parcourus</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBlock}>
+          <Text style={styles.statValue}>
+            {loading ? '--' : formatDuration(stats.durationMin)}
+          </Text>
+          <Text style={styles.statLabel}>Durée</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBlock}>
+          <Text style={styles.statValue}>
+            {loading ? '--' : `${stats.avgSpeedKmh}`}
+          </Text>
+          <Text style={styles.statLabel}>km/h moy.</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
