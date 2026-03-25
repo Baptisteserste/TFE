@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, ChevronRight, Compass } from "lucide-react";
+import { MapPin, Calendar, ChevronRight, Compass, Ruler, Camera, Globe, Zap } from "lucide-react";
 import { getTrips, Trip } from "@/services/tripService";
 import { hasToken } from "@/services/authService";
 import { useRouter } from "next/navigation";
@@ -17,12 +17,14 @@ export default function TripsPage() {
       router.push("/login");
       return;
     }
-    
     getTrips()
       .then(setTrips)
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [router]);
+
+  const completed = trips.filter(t => t.status === 'completed').length;
+  const active    = trips.filter(t => t.status === 'active').length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -38,17 +40,71 @@ export default function TripsPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="flex justify-between items-end mb-10">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight mb-2">Mes Trajets</h1>
-            <p className="text-slate-400 text-lg">Retrouvez l'historique de tous vos voyages archivés.</p>
+
+        {/* Hero titre */}
+        <div className="mb-10">
+          <h1 className="text-4xl font-extrabold tracking-tight mb-2">Mes Trajets</h1>
+          <p className="text-slate-400 text-lg">Votre carnet de voyage connecté — tous vos souvenirs en un seul endroit.</p>
+        </div>
+
+        {/* Global stats banner */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+          <div className="col-span-2 sm:col-span-1 bg-gradient-to-br from-indigo-600/20 to-violet-600/20 border border-indigo-500/30 rounded-2xl p-5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-indigo-300">
+              <Globe className="w-5 h-5" />
+              <span className="text-xs font-bold uppercase tracking-wider">Total voyages</span>
+            </div>
+            <div className="text-4xl font-black text-white">{isLoading ? '…' : trips.length}</div>
+            <div className="text-xs text-slate-400">{completed} terminé{completed > 1 ? 's' : ''} · {active} en cours</div>
           </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-emerald-400">
+              <Zap className="w-5 h-5" />
+              <span className="text-xs font-bold uppercase tracking-wider">Actifs</span>
+            </div>
+            <div className="text-3xl font-black text-white">{active}</div>
+            <div className="text-xs text-slate-500">voyage{active > 1 ? 's' : ''} en cours</div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-rose-400">
+              <Camera className="w-5 h-5" />
+              <span className="text-xs font-bold uppercase tracking-wider">Terminés</span>
+            </div>
+            <div className="text-3xl font-black text-white">{completed}</div>
+            <div className="text-xs text-slate-500">voyage{completed > 1 ? 's' : ''} archivé{completed > 1 ? 's' : ''}</div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-amber-400">
+              <Ruler className="w-5 h-5" />
+              <span className="text-xs font-bold uppercase tracking-wider">Depuis</span>
+            </div>
+            <div className="text-xl font-black text-white">
+              {trips.length > 0
+                ? new Date(trips[trips.length - 1].start_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+                : '—'}
+            </div>
+            <div className="text-xs text-slate-500">premier voyage</div>
+          </div>
+        </div>
+
+        {/* Liste des voyages */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-slate-200">Tous les voyages</h2>
+          {active > 0 && (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {active} en cours
+            </span>
+          )}
         </div>
 
         {isLoading ? (
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-slate-900 border border-slate-800 rounded-2xl"></div>
+              <div key={i} className="h-24 bg-slate-900 border border-slate-800 rounded-2xl" />
             ))}
           </div>
         ) : trips.length === 0 ? (
@@ -60,20 +116,19 @@ export default function TripsPage() {
         ) : (
           <div className="grid gap-4">
             {trips.map((trip) => (
-              <Link 
-                key={trip.id} 
+              <Link
+                key={trip.id}
                 href={`/trips/${trip.id}`}
                 className="group bg-slate-900/50 border border-slate-800 hover:border-indigo-500/50 rounded-2xl p-6 transition-all hover:bg-slate-900 shadow-lg flex items-center justify-between"
               >
                 <div className="flex items-center gap-6">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${
-                    trip.status === 'active' 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                    trip.status === 'active'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                       : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
                   }`}>
                     <MapPin className="w-6 h-6" />
                   </div>
-                  
                   <div>
                     <div className="flex items-center gap-3 mb-1">
                       <h2 className="text-xl font-bold group-hover:text-indigo-400 transition-colors">{trip.title}</h2>
@@ -82,11 +137,14 @@ export default function TripsPage() {
                           ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                           : 'bg-slate-800 border-slate-700 text-slate-300'
                       }`}>
-                        {trip.status === 'active' ? 'En cours' : 'Terminé'}
+                        {trip.status === 'active' ? '🟢 En cours' : '✅ Terminé'}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
-                      <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {new Date(trip.start_date).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {new Date(trip.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      {trip.end_date && (
+                        <span className="flex items-center gap-1.5 text-slate-600">→ {new Date(trip.end_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      )}
                     </div>
                   </div>
                 </div>
