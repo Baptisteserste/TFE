@@ -26,6 +26,7 @@ export default function TripsPage() {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [routes, setRoutes] = useState<TripRoute[]>([]);
   const [showMap, setShowMap] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (!hasToken()) { router.push("/login"); return; }
@@ -50,7 +51,9 @@ export default function TripsPage() {
 
   const completed = trips.filter(t => t.status === 'completed').length;
   const active    = trips.filter(t => t.status === 'active').length;
-  const filteredTrips = filter === 'all' ? trips : trips.filter(t => t.status === filter);
+  const filteredTrips = trips
+    .filter(t => filter === 'all' || t.status === filter)
+    .filter(t => t.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -141,13 +144,28 @@ export default function TripsPage() {
         )}
 
         {/* Liste des voyages */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-slate-200">Tous les voyages</h2>
           {active > 0 && (
             <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               {active} en cours
             </span>
+          )}
+        </div>
+
+        {/* Barre de recherche */}
+        <div className="relative mb-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher un voyage..."
+            className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors text-sm"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors text-lg">×</button>
           )}
         </div>
 

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ScrollView,
+  TextInput,
   Alert,
 } from 'react-native';
 import { getTrips, deleteTrip, updateTrip, Trip } from '../services/tripService';
@@ -75,6 +76,7 @@ export default function TripsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [search, setSearch] = useState('');
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleOpenTrip = (trip: Trip) => {
@@ -136,11 +138,26 @@ export default function TripsScreen() {
     );
   }
 
-  const filteredTrips = filter === 'all' ? trips : trips.filter(t => t.status === filter);
+  const filteredTrips = trips
+    .filter(t => filter === 'all' || t.status === filter)
+    .filter(t => t.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mes Voyages</Text>
+
+      {/* Barre de recherche */}
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Rechercher un voyage..."
+          placeholderTextColor="#555"
+          value={search}
+          onChangeText={setSearch}
+          clearButtonMode="while-editing"
+        />
+      </View>
 
       {/* Filtres */}
       <ScrollView
@@ -242,6 +259,24 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 52, marginBottom: 12 },
   emptyText: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: '#8e8e93', textAlign: 'center', paddingHorizontal: 40 },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2a2a3e',
+    paddingHorizontal: 12,
+  },
+  searchIcon: { fontSize: 16, marginRight: 8 },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 15,
+    paddingVertical: 11,
+  },
   filterRow: {
     paddingBottom: 12,
   },
