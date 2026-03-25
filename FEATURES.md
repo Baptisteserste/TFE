@@ -166,6 +166,19 @@ Calculées côté client (mobile et web) via la **formule de Haversine** :
 
 ---
 
+### 12. Graphique de vitesse
+
+- Composant `SpeedChart.tsx` (Chart.js `react-chartjs-2`, import dynamique)
+- Affiché dans l'onglet "Tracé GPS" de la sidebar de détail d'un voyage
+- Graphique `Line` en zone remplie (area chart) — style sombre (fond transparent, ligne indigo)
+- **Axe X** : heure de chaque point GPS (format HH:MM)
+- **Axe Y** : vitesse en km/h (conversion m/s → km/h)
+- Tooltip interactif au survol (vitesse exacte)
+- Vitesse maximale affichée en haut à droite du graphique
+- Message d'absence si pas assez de données de vitesse
+
+---
+
 ## 🔧 Détails techniques notables
 
 ### Backend (Laravel)
