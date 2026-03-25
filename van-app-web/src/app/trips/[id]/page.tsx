@@ -2,10 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { MapPin, Navigation, Compass, Crosshair, ImageIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import { MapPin, Navigation, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { getLocations, getMedias, LocationPoint, Media } from "@/services/tripService";
 import { hasToken } from "@/services/authService";
+
+const TripMap = dynamic(() => import("@/components/TripMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center bg-slate-900 text-slate-500">
+      <div className="text-center">
+        <div className="animate-spin text-4xl mb-4">🗺️</div>
+        <p>Chargement de la carte...</p>
+      </div>
+    </div>
+  ),
+});
 
 export default function TripDetailPage() {
   const router = useRouter();
@@ -47,7 +60,7 @@ export default function TripDetailPage() {
             </Link>
             <div>
               <h1 className="font-bold text-lg flex items-center gap-2">
-                <Compass className="w-5 h-5 text-indigo-400" />
+                <MapPin className="w-5 h-5 text-indigo-400" />
                 Détail du voyage #{id}
               </h1>
               <div className="text-xs text-indigo-400 font-medium flex items-center gap-1">
@@ -104,72 +117,9 @@ export default function TripDetailPage() {
           </div>
         </aside>
 
-        {/* Map Area Mock */}
-        <div className="flex-1 relative bg-slate-900">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-          
-          {/* FAKE MAP STYLING */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
-            <Compass className="w-32 h-32 text-slate-800 mb-4 animate-[spin_10s_linear_infinite]" />
-            <div className="text-slate-600 font-bold tracking-widest uppercase text-xl">Carte Réel Temps (Simulée)</div>
-            {locations.length > 0 ? (
-              <div className="mt-4 bg-slate-800 text-slate-300 px-4 py-2 rounded-full text-sm">
-                Affiche les tracés de {locations.length} points
-              </div>
-            ) : (
-              <div className="mt-4 text-slate-500 text-sm">Aucune donnée GPS pour le moment.</div>
-            )}
-          </div>
-
-          {/* GALERIE PHOTO (Carrousel horizontal overlay) */}
-          {medias.length > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 p-8 pt-32 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent z-20">
-              <div className="flex items-center gap-2 mb-4 drop-shadow-md">
-                <ImageIcon className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-lg font-bold text-white tracking-tight">Galerie du Voyage</h3>
-                <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full font-bold ml-2">
-                  {medias.length} {medias.length > 1 ? 'Photos' : 'Photo'}
-                </span>
-              </div>
-              
-              <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {medias.map((media) => (
-                  <div 
-                    key={media.id} 
-                    className="relative w-72 h-48 rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl flex-shrink-0 snap-start group bg-slate-900"
-                  >
-                    {media.image_path ? (
-                      <img 
-                        src={`${BASE_URL}/storage/${media.image_path}`} 
-                        alt={media.description || "Photo du voyage"} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
-                        <ImageIcon className="w-8 h-8 opacity-50" />
-                      </div>
-                    )}
-                    
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4 pointer-events-none">
-                      {media.description && (
-                        <p className="text-white text-sm font-semibold truncate shadow-black drop-shadow-md">
-                          {media.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-wider shadow-black drop-shadow-md">
-                          {new Date(media.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        </p>
-                        <p className="text-slate-400 text-[10px]">
-                          Lat: {media.latitude.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Real Leaflet Map */}
+        <div className="flex-1 relative">
+          <TripMap locations={locations} medias={medias} baseUrl={BASE_URL} />
         </div>
       </div>
     </div>
