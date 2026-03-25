@@ -2,26 +2,50 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, Calendar, ChevronRight, Compass, Ruler, Camera, Globe, Zap } from "lucide-react";
-import { getTrips, Trip } from "@/services/tripService";
+import dynamic from "next/dynamic";
+import { MapPin, Calendar, ChevronRight, Compass, Ruler, Camera, Globe, Zap, Map } from "lucide-react";
+import { getTrips, getLocations, Trip, LocationPoint } from "@/services/tripService";
 import { hasToken } from "@/services/authService";
 import { useRouter } from "next/navigation";
+
+const AllTripsMap = dynamic(() => import("@/components/AllTripsMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+      <span className="animate-spin mr-2">🗺️</span> Chargement de la carte...
+    </div>
+  ),
+});
+
+interface TripRoute { trip: Trip; locations: LocationPoint[]; }
 
 export default function TripsPage() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [routes, setRoutes] = useState<TripRoute[]>([]);
+  const [showMap, setShowMap] = useState(true);
 
   useEffect(() => {
-    if (!hasToken()) {
-      router.push("/login");
-      return;
-    }
-    getTrips()
-      .then(setTrips)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    if (!hasToken()) { router.push("/login"); return; }
+    getTrips().then(async (data) => {
+      setTrips(data);
+      // Charge les points GPS de chaque voyage en parallèle
+      const routeData = await Promise.all(
+        data.map(async (trip) => {
+          try {
+            const locations = await getLocations(trip.id);
+            return { trip, locations };
+          } catch {
+            return { trip, locations: [] };
+          }
+        })
+      );
+      setRoutes(routeData.filter(r => r.locations.length > 0));
+    })
+    .catch(console.error)
+    .finally(() => setIsLoading(false));
   }, [router]);
 
   const completed = trips.filter(t => t.status === 'completed').length;
@@ -91,6 +115,30 @@ export default function TripsPage() {
             <div className="text-xs text-slate-500">premier voyage</div>
           </div>
         </div>
+
+        {/* Carte mondiale de tous les voyages */}
+        {routes.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold flex items-center gap-2 text-slate-200">
+                <Map className="w-5 h-5 text-indigo-400" />
+                Carte de tous mes voyages
+                <span className="text-xs text-slate-500 font-normal ml-1">{routes.length} tracé{routes.length > 1 ? 's' : ''}</span>
+              </h2>
+              <button
+                onClick={() => setShowMap(v => !v)}
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                {showMap ? '▲ Réduire' : '▼ Afficher'}
+              </button>
+            </div>
+            {showMap && (
+              <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-2xl" style={{ height: '380px' }}>
+                <AllTripsMap routes={routes} />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Liste des voyages */}
         <div className="flex items-center justify-between mb-6">
