@@ -9,7 +9,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { getTrips, deleteTrip, Trip } from '../services/tripService';
+import { getTrips, deleteTrip, updateTrip, Trip } from '../services/tripService';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from './TripDetailScreen';
@@ -28,7 +28,7 @@ function statusLabel(status: string): { label: string; color: string } {
   return { label: status, color: '#8e8e93' };
 }
 
-function TripCard({ trip, onDelete, onPress }: { trip: Trip; onDelete: (id: number) => void; onPress: (trip: Trip) => void }) {
+function TripCard({ trip, onDelete, onStop, onPress }: { trip: Trip; onDelete: (id: number) => void; onStop: (id: number) => void; onPress: (trip: Trip) => void }) {
   const { label, color } = statusLabel(trip.status);
 
   const confirmDelete = () => {
@@ -49,9 +49,16 @@ function TripCard({ trip, onDelete, onPress }: { trip: Trip; onDelete: (id: numb
           <Text style={styles.cardTitle}>{trip.title}</Text>
           <Text style={[styles.statusBadge, { color }]}>{label}</Text>
         </View>
-        <TouchableOpacity style={styles.deleteButton} onPress={confirmDelete}>
-          <Text style={styles.deleteIcon}>🗑️</Text>
-        </TouchableOpacity>
+        <View style={styles.cardActions}>
+          {trip.status === 'active' && (
+            <TouchableOpacity style={styles.stopButton} onPress={() => onStop(trip.id)}>
+              <Text style={styles.stopIcon}>🏁</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.deleteButton} onPress={confirmDelete}>
+            <Text style={styles.deleteIcon}>🗑️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <Text style={styles.cardDate}>📅 {formatDate(trip.start_date)}</Text>
       {trip.end_date && (
@@ -95,6 +102,15 @@ export default function TripsScreen() {
     }
   };
 
+  const handleStop = async (id: number) => {
+    try {
+      await updateTrip(id, { status: 'completed', end_date: new Date().toISOString() });
+      setTrips((prev) => prev.map((t) => t.id === id ? { ...t, status: 'completed', end_date: new Date().toISOString() } : t));
+    } catch {
+      Alert.alert('Erreur', 'Impossible de terminer ce voyage.');
+    }
+  };
+
   // Recharge la liste à chaque fois que l'onglet est affiché
   useFocusEffect(
     useCallback(() => {
@@ -123,7 +139,7 @@ export default function TripsScreen() {
       <FlatList
         data={trips}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <TripCard trip={item} onDelete={handleDelete} onPress={handleOpenTrip} />}
+        renderItem={({ item }) => <TripCard trip={item} onDelete={handleDelete} onStop={handleStop} onPress={handleOpenTrip} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#007BFF" />}
         contentContainerStyle={trips.length === 0 ? styles.empty : styles.list}
         ListEmptyComponent={
@@ -175,6 +191,17 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '700', color: '#fff', marginBottom: 4 },
   statusBadge: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
   cardDate: { fontSize: 14, color: '#8e8e93', marginTop: 4 },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stopButton: {
+    padding: 8,
+    backgroundColor: '#FF9500',
+    borderRadius: 8,
+  },
+  stopIcon: { fontSize: 16 },
   deleteButton: {
     padding: 8,
     backgroundColor: '#2a2a3e',
