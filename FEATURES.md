@@ -191,6 +191,19 @@ Calculées côté client (mobile et web) via la **formule de Haversine** :
 
 ---
 
+### 14. Météo au départ du voyage
+
+- Service `weatherService.ts` utilisant l'API **OpenMeteo** (gratuite, sans clé API)
+- Données historiques via `archive-api.open-meteo.com`
+- Paramètres utilisés : `temperature_2m`, `weathercode`, `windspeed_10m` à l'heure du départ
+- Conversion des codes météo WMO en labels lisibles + émojis (ex : ☀️ Ciel dégagé, ⛈️ Orage...)
+- **Web** : carte gradient ciel bleuté dans la sidebar du détail de voyage
+  - Température en °C, condition, vitesse du vent
+  - Apparaît automatiquement si le premier point GPS est disponible
+  - S'affiche en silence (pas d'erreur visible si l'API est indisponible)
+
+---
+
 ## 🔧 Détails techniques notables
 
 ### Backend (Laravel)
