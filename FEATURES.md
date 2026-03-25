@@ -179,6 +179,18 @@ Calculées côté client (mobile et web) via la **formule de Haversine** :
 
 ---
 
+### 13. Recherche de voyages
+
+- **Mobile** (`TripsScreen`) : champ de texte avec icône 🔍 sous le titre
+  - Style card sombre, placeholder gris, texte blanc
+  - Filtre en temps réel sur le titre (insensible à la casse)
+  - Compatible avec les chips de filtrage de statut (les deux filtres se combinent)
+- **Web** (`/trips`) : barre de recherche avec icône 🔍 et bouton « × » pour effacer
+  - Apparait entre l'en-tête de section et les filtres de statut
+  - Déborde naturellement si aucun résultat trouvé
+
+---
+
 ## 🔧 Détails techniques notables
 
 ### Backend (Laravel)
