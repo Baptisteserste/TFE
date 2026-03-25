@@ -11,6 +11,7 @@ export default function TripsPage() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
 
   useEffect(() => {
     if (!hasToken()) {
@@ -25,6 +26,7 @@ export default function TripsPage() {
 
   const completed = trips.filter(t => t.status === 'completed').length;
   const active    = trips.filter(t => t.status === 'active').length;
+  const filteredTrips = filter === 'all' ? trips : trips.filter(t => t.status === filter);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -101,21 +103,37 @@ export default function TripsPage() {
           )}
         </div>
 
+        {/* Filtres */}
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {(['all', 'active', 'completed'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
+                filter === f
+                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                  : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+              }`}
+            >
+              {f === 'all' ? `🗂️ Tous (${trips.length})` : f === 'active' ? `🟢 En cours (${active})` : `✅ Terminés (${completed})`}
+            </button>
+          ))}
+        </div>
+
         {isLoading ? (
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-24 bg-slate-900 border border-slate-800 rounded-2xl" />
             ))}
           </div>
-        ) : trips.length === 0 ? (
-          <div className="text-center py-20 bg-slate-900/50 rounded-2xl border border-slate-800">
-            <MapPin className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Aucun trajet trouvé</h3>
-            <p className="text-slate-400">Vos voyages enregistrés depuis l'app mobile apparaîtront ici.</p>
+        ) : filteredTrips.length === 0 ? (
+          <div className="text-center py-12 bg-slate-900/50 rounded-2xl border border-slate-800">
+            <MapPin className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-400">Aucun voyage {filter === 'active' ? 'en cours' : filter === 'completed' ? 'terminé' : ''} trouvé.</p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {trips.map((trip) => (
+            {filteredTrips.map((trip) => (
               <Link
                 key={trip.id}
                 href={`/trips/${trip.id}`}

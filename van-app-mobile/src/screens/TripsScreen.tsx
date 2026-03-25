@@ -73,6 +73,7 @@ export default function TripsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleOpenTrip = (trip: Trip) => {
@@ -134,23 +135,43 @@ export default function TripsScreen() {
     );
   }
 
+  const filteredTrips = filter === 'all' ? trips : trips.filter(t => t.status === filter);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mes Voyages</Text>
+
+      {/* Filtres */}
+      <View style={styles.filterRow}>
+        {(['all', 'active', 'completed'] as const).map(f => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterChip, filter === f && styles.filterChipActive]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
+              {f === 'all' ? `Tous (${trips.length})` : f === 'active' ? `🟢 En cours (${trips.filter(t => t.status === 'active').length})` : `✅ Terminés (${trips.filter(t => t.status === 'completed').length})`}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {error && <Text style={styles.error}>{error}</Text>}
       <FlatList
-        data={trips}
+        data={filteredTrips}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <TripCard trip={item} onDelete={handleDelete} onStop={handleStop} onPress={handleOpenTrip} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#007BFF" />}
-        contentContainerStyle={trips.length === 0 ? styles.empty : styles.list}
+        contentContainerStyle={filteredTrips.length === 0 ? styles.empty : styles.list}
         ListEmptyComponent={
           <View style={styles.centered}>
             <Text style={styles.emptyEmoji}>🚐</Text>
-            <Text style={styles.emptyText}>Aucun voyage pour l'instant.</Text>
-            <Text style={styles.emptySubtext}>
-              Démarre ton premier voyage depuis la carte !
+            <Text style={styles.emptyText}>
+              {filter === 'all' ? 'Aucun voyage pour l\'instant.' : `Aucun voyage ${filter === 'active' ? 'en cours' : 'terminé'}.`}
             </Text>
+            {filter === 'all' && (
+              <Text style={styles.emptySubtext}>Démarre ton premier voyage depuis la carte !</Text>
+            )}
           </View>
         }
       />
@@ -215,4 +236,24 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 52, marginBottom: 12 },
   emptyText: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: '#8e8e93', textAlign: 'center', paddingHorizontal: 40 },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#2a2a3e',
+    borderWidth: 1,
+    borderColor: '#3a3a4e',
+  },
+  filterChipActive: {
+    backgroundColor: '#007BFF',
+    borderColor: '#007BFF',
+  },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: '#8e8e93' },
+  filterChipTextActive: { color: '#fff' },
 });
