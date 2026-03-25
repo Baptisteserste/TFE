@@ -8,6 +8,8 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -80,8 +82,22 @@ export default function TripDetailScreen() {
   const [medias, setMedias] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
   const [tripStatus, setTripStatus] = useState(trip.status);
+  const [tripTitle, setTripTitle] = useState(trip.title);
   const [completing, setCompleting] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameText, setRenameText] = useState(trip.title);
   const mapRef = useRef<MapView>(null);
+
+  const handleRename = async () => {
+    if (!renameText.trim()) return;
+    try {
+      await updateTrip(trip.id, { title: renameText.trim() });
+      setTripTitle(renameText.trim());
+      setShowRenameModal(false);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de renommer ce voyage.');
+    }
+  };
 
   const handleComplete = () => {
     Alert.alert(
@@ -144,7 +160,12 @@ export default function TripDetailScreen() {
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{trip.title}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.headerTitle} numberOfLines={1}>{tripTitle}</Text>
+            <TouchableOpacity style={styles.editButton} onPress={() => { setRenameText(tripTitle); setShowRenameModal(true); }}>
+              <Text style={styles.editIcon}>✏️</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.headerSub}>
             📅 {formatDate(trip.start_date)}
             {tripStatus === 'completed'
@@ -240,7 +261,30 @@ export default function TripDetailScreen() {
         </MapView>
       )}
 
-      {/* Message si aucun point GPS */}
+      {/* Modal renommer */}
+      <Modal visible={showRenameModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>✏️ Renommer le voyage</Text>
+            <TextInput
+              style={styles.renameInput}
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="Nom du voyage"
+              placeholderTextColor="#8e8e93"
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowRenameModal(false)}>
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSave} onPress={handleRename}>
+                <Text style={styles.modalSaveText}>Sauvegarder</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {!loading && locations.length === 0 && (
         <View style={styles.emptyOverlay}>
           <Text style={styles.emptyEmoji}>🗺️</Text>
@@ -276,7 +320,10 @@ const styles = StyleSheet.create({
   },
   backIcon: { color: '#fff', fontSize: 20, fontWeight: '700' },
   headerInfo: { flex: 1 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  editButton: { padding: 4 },
+  editIcon: { fontSize: 16 },
+  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800', flex: 1 },
   headerSub: { color: '#8e8e93', fontSize: 13, marginTop: 2 },
   statsRow: {
     flexDirection: 'row',
@@ -304,6 +351,38 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   completeButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalBox: {
+    backgroundColor: '#1a1a2e',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 16 },
+  renameInput: {
+    backgroundColor: '#2a2a3e',
+    borderRadius: 12,
+    padding: 14,
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalButtons: { flexDirection: 'row', gap: 12 },
+  modalCancel: {
+    flex: 1, padding: 14, borderRadius: 12,
+    backgroundColor: '#2a2a3e', alignItems: 'center',
+  },
+  modalCancelText: { color: '#8e8e93', fontWeight: '700' },
+  modalSave: {
+    flex: 1, padding: 14, borderRadius: 12,
+    backgroundColor: '#007BFF', alignItems: 'center',
+  },
+  modalSaveText: { color: '#fff', fontWeight: '700' },
   emptyOverlay: {
     position: 'absolute',
     bottom: 60,
