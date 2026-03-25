@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  ScrollView,
   Alert,
 } from 'react-native';
 import { getTrips, deleteTrip, updateTrip, Trip } from '../services/tripService';
@@ -142,7 +143,12 @@ export default function TripsScreen() {
       <Text style={styles.title}>Mes Voyages</Text>
 
       {/* Filtres */}
-      <View style={styles.filterRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRow}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+      >
         {(['all', 'active', 'completed'] as const).map(f => (
           <TouchableOpacity
             key={f}
@@ -154,7 +160,7 @@ export default function TripsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {error && <Text style={styles.error}>{error}</Text>}
       <FlatList
@@ -237,9 +243,6 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: '#8e8e93', textAlign: 'center', paddingHorizontal: 40 },
   filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
     paddingBottom: 12,
   },
   filterChip: {
