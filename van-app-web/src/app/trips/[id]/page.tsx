@@ -7,6 +7,7 @@ import { MapPin, Navigation, ImageIcon, Camera, Clock, Ruler, Timer, Gauge } fro
 import Link from "next/link";
 import { getLocations, getMedias, LocationPoint, Media } from "@/services/tripService";
 import { hasToken } from "@/services/authService";
+import { fetchWeather, weatherCodeToLabel, WeatherData } from "@/services/weatherService";
 
 const TripMap = dynamic(() => import("@/components/TripMap"), {
   ssr: false,
@@ -57,6 +58,7 @@ export default function TripDetailPage() {
   const [medias, setMedias] = useState<Media[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'gps' | 'photos'>('gps');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
 
   useEffect(() => {
     if (!hasToken()) {
@@ -65,7 +67,18 @@ export default function TripDetailPage() {
     }
     
     Promise.all([
-      getLocations(id).then(setLocations),
+      getLocations(id).then(data => {
+        setLocations(data);
+        // Fetch weather for the first GPS point
+        if (data.length > 0) {
+          const first = data[0];
+          const date = first.timestamp.split('T')[0];
+          const hour = new Date(first.timestamp).getHours();
+          fetchWeather(first.latitude, first.longitude, date, hour)
+            .then(setWeather)
+            .catch(() => {}); // silently ignore if weather unavailable
+        }
+      }),
       getMedias(id).then(setMedias)
     ])
       .catch(console.error)
@@ -171,6 +184,22 @@ export default function TripDetailPage() {
                 <div className="font-bold">{notes.length}</div>
               </div>
             </div>
+            {/* Météo au départ */}
+            {weather && (() => {
+              const { label, emoji } = weatherCodeToLabel(weather.weathercode);
+              return (
+                <div className="mt-2 bg-gradient-to-br from-sky-500/10 to-indigo-500/10 border border-sky-500/20 rounded-xl p-4">
+                  <div className="text-xs text-sky-400 font-semibold uppercase tracking-wider mb-2">🌡️ Météo au départ</div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl">{emoji}</span>
+                    <div>
+                      <div className="font-bold text-white text-lg">{weather.temperature}°C</div>
+                      <div className="text-xs text-slate-400">{label} · 💨 {weather.windspeed} km/h</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
 
