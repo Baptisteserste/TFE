@@ -7,6 +7,10 @@ import {
   Dimensions,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +23,8 @@ export default function MapScreen() {
   const [isTracking, setIsTracking] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
   const [photoMarkers, setPhotoMarkers] = useState<Media[]>([]);
+  const [noteText, setNoteText] = useState('');
+  const [showNoteModal, setShowNoteModal] = useState(false);
 
   // Références pour le voyage actif et le buffer GPS
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -185,6 +191,28 @@ export default function MapScreen() {
     }
   };
 
+  const handleAddNote = async () => {
+    if (!activeTrip.current || !location) return;
+    if (!noteText.trim()) {
+      Alert.alert('Note vide', 'Ecris quelque chose avant de sauvegarder !');
+      return;
+    }
+    try {
+      const saved = await uploadMedia(
+        activeTrip.current.id,
+        '', // pas d'image
+        location.coords.latitude,
+        location.coords.longitude,
+        noteText.trim(),
+      );
+      if (saved) setPhotoMarkers(prev => [...(prev || []), saved]);
+      setNoteText('');
+      setShowNoteModal(false);
+    } catch (e: any) {
+      Alert.alert('Erreur', 'Impossible de sauvegarder la note.');
+    }
+  };
+
   if (!location) {
     return (
       <View style={styles.centered}>
@@ -241,14 +269,48 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Floating Action Button pour la photo */}
+      {/* Floating buttons */}
       <View style={styles.floatingButtonsContainer}>
         {isTracking && activeTrip.current && (
-          <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
-            <Text style={styles.photoIcon}>📸</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity style={styles.noteButton} onPress={() => setShowNoteModal(true)}>
+              <Text style={styles.noteIcon}>📝</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
+              <Text style={styles.photoIcon}>📸</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
+
+      {/* Modal saisie de note */}
+      <Modal visible={showNoteModal} transparent animationType="slide">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>📝 Ajouter une note</Text>
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Decris cet endroit..."
+              placeholderTextColor="#8e8e93"
+              value={noteText}
+              onChangeText={setNoteText}
+              multiline
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => { setShowNoteModal(false); setNoteText(''); }}>
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSave} onPress={handleAddNote}>
+                <Text style={styles.modalSaveText}>Sauvegarder</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       <View style={styles.uiContainer}>
         <TouchableOpacity
@@ -322,4 +384,59 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   photoIcon: { fontSize: 26 },
+  noteButton: {
+    backgroundColor: '#5856D6',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    marginBottom: 10,
+  },
+  noteIcon: { fontSize: 26 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalBox: {
+    backgroundColor: '#1a1a2e',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 16 },
+  noteInput: {
+    backgroundColor: '#2a2a3e',
+    borderRadius: 12,
+    padding: 14,
+    color: '#fff',
+    fontSize: 15,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  modalButtons: { flexDirection: 'row', gap: 12 },
+  modalCancel: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#2a2a3e',
+    alignItems: 'center',
+  },
+  modalCancelText: { color: '#8e8e93', fontWeight: '700' },
+  modalSave: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#5856D6',
+    alignItems: 'center',
+  },
+  modalSaveText: { color: '#fff', fontWeight: '700' },
 });
