@@ -20,6 +20,8 @@ const TripMap = dynamic(() => import("@/components/TripMap"), {
   ),
 });
 
+const SpeedChart = dynamic(() => import("@/components/SpeedChart"), { ssr: false });
+
 // Formule de Haversine
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -191,7 +193,13 @@ export default function TripDetailPage() {
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto">
             {activeTab === 'gps' && (
-              <div className="p-6">
+              <div className="p-4">
+                {/* Graphique de vitesse */}
+                <div className="mb-5 bg-slate-900 border border-slate-800 rounded-xl p-4">
+                  <SpeedChart locations={locations} />
+                </div>
+                {/* Timeline GPS */}
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-3">Derniers points</p>
                 <ul className="space-y-4 relative before:absolute before:inset-y-0 before:left-[11px] before:w-0.5 before:bg-slate-800">
                   {locations.slice(-10).reverse().map((loc, i) => (
                     <li key={i} className="flex gap-4 relative">
