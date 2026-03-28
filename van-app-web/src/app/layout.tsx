@@ -16,7 +16,10 @@ export const metadata: Metadata = {
   title: "VanApp — Carnet de voyage connecté",
   description: "Enregistrez vos voyages en van, suivez votre tracé GPS et revivez vos aventures.",
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/icon.png", type: "image/png" },
+    ],
     apple: "/icon.png",
   },
 };
