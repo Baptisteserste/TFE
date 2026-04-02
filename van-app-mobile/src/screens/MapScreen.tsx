@@ -314,14 +314,7 @@ export default function MapScreen() {
         ))}
       </MapView>
 
-      {/* Indicateur de voyage actif */}
-      {isTracking && activeTrip.current && (
-        <View style={styles.tripBadge}>
-          <Text style={styles.tripBadgeText}>
-            🔴 En route · {routeCoordinates.length} pts
-          </Text>
-        </View>
-      )}
+
 
       {/* Bouton recentrer — visible si l'utilisateur a bougé la carte pendant le tracking */}
       {isTracking && !followMap && (
