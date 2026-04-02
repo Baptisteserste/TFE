@@ -141,6 +141,16 @@ export default function MapScreen() {
             latitude: newLocation.coords.latitude,
             longitude: newLocation.coords.longitude,
           }]);
+
+          // ✅ Pousse aussi dans le buffer backend (foreground)
+          _backgroundBuffer.push({
+            latitude: newLocation.coords.latitude,
+            longitude: newLocation.coords.longitude,
+            speed: newLocation.coords.speed ?? undefined,
+            timestamp: new Date(newLocation.timestamp).toISOString(),
+            source: 'mobile',
+          });
+
           // Centrer la carte sur la position si le suivi est actif
           if (followMap && mapRef.current) {
             mapRef.current.animateToRegion({
