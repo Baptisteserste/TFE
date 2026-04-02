@@ -151,6 +151,22 @@ npx expo start --android
 
 ---
 
+## Lancement rapide avec Docker
+
+La commande suivante démarre automatiquement MySQL, le backend Laravel et l'interface web Next.js :
+
+```bash
+docker compose up --build
+```
+
+| Service  | URL                       |
+|----------|---------------------------|
+| Backend  | http://localhost:8000/api |
+| Web      | http://localhost:3000     |
+| MySQL    | localhost:3306            |
+
+> Aucune installation préalable de PHP ou MySQL requise — tout est conteneurisé.
+
 ## Deploiement
 
 | Composant | Service  | Commande                                          |

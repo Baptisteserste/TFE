@@ -1,0 +1,75 @@
+services:
+
+  # ── Base de données MySQL ──────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: vanapp_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: vanapp
+      MYSQL_USER: vanapp
+      MYSQL_PASSWORD: vanapp
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Laravel ────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./van-app-backend
+      dockerfile: Dockerfile
+    container_name: vanapp_backend
+    restart: unless-stopped
+    working_dir: /var/www
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: vanapp
+      DB_USERNAME: vanapp
+      DB_PASSWORD: vanapp
+    volumes:
+      - ./van-app-backend:/var/www
+      - /var/www/vendor        # exclure vendor du bind mount
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "composer install --no-interaction &&
+             php artisan key:generate --no-interaction &&
+             php artisan migrate --force &&
+             php artisan storage:link &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+
+  # ── Interface Web Next.js ──────────────────────────────────────────
+  web:
+    image: node:20-alpine
+    container_name: vanapp_web
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    volumes:
+      - ./van-app-web:/app
+      - /app/node_modules      # exclure node_modules du bind mount
+      - /app/.next
+    depends_on:
+      - backend
+    command: sh -c "npm install && npm run dev"
+
+volumes:
+  db_data:
