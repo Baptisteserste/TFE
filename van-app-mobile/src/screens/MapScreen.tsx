@@ -74,6 +74,8 @@ export default function MapScreen() {
   const activeTrip = useRef<Trip | null>(null);
   const locationBuffer = useRef<LocationPoint[]>([]);
   const flushInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mapRef = useRef<MapView | null>(null);
+  const [followMap, setFollowMap] = useState(true);
 
   // 1. Au démarrage : demande permission GPS (avant + arrière-plan) et centre la carte
   useEffect(() => {
@@ -139,6 +141,15 @@ export default function MapScreen() {
             latitude: newLocation.coords.latitude,
             longitude: newLocation.coords.longitude,
           }]);
+          // Centrer la carte sur la position si le suivi est actif
+          if (followMap && mapRef.current) {
+            mapRef.current.animateToRegion({
+              latitude: newLocation.coords.latitude,
+              longitude: newLocation.coords.longitude,
+              latitudeDelta: 0.005,
+              longitudeDelta: 0.005,
+            }, 800);
+          }
         },
       );
 
@@ -272,6 +283,7 @@ export default function MapScreen() {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         initialRegion={{
           latitude: location.coords.latitude,
@@ -280,6 +292,7 @@ export default function MapScreen() {
           longitudeDelta: 0.01,
         }}
         showsUserLocation={true}
+        onPanDrag={() => { if (isTracking) setFollowMap(false); }}
       >
         <Polyline coordinates={routeCoordinates} strokeColor="#FF3B30" strokeWidth={5} />
         <Marker
@@ -308,6 +321,26 @@ export default function MapScreen() {
             🔴 En route · {routeCoordinates.length} pts
           </Text>
         </View>
+      )}
+
+      {/* Bouton recentrer — visible si l'utilisateur a bougé la carte pendant le tracking */}
+      {isTracking && !followMap && (
+        <TouchableOpacity
+          style={styles.recenterButton}
+          onPress={() => {
+            setFollowMap(true);
+            if (location && mapRef.current) {
+              mapRef.current.animateToRegion({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              }, 800);
+            }
+          }}
+        >
+          <Text style={styles.recenterText}>📍 Recentrer</Text>
+        </TouchableOpacity>
       )}
 
       {/* Floating buttons */}
@@ -480,4 +513,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalSaveText: { color: '#fff', fontWeight: '700' },
+  recenterButton: {
+    position: 'absolute',
+    bottom: 180,
+    alignSelf: 'center',
+    backgroundColor: '#007BFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  recenterText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
