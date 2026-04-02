@@ -78,7 +78,7 @@ export default function LoginPage() {
 
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">
-              {mode === "login" ? "Bienvenue 👋" : "Rejoindre VanApp 🚐"}
+              {mode === "login" ? "Bienvenue" : "Rejoindre VanApp"}
             </h1>
             <p className="text-slate-400 text-sm">
               {mode === "login"
