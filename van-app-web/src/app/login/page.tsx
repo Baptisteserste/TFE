@@ -106,7 +106,7 @@ export default function LoginPage() {
                     value={name}
                     onChange={e => setName(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                    placeholder="Baptiste Serste"
+                    placeholder="Jean Dupont"
                     required
                   />
                 </div>
@@ -122,7 +122,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                  placeholder="nom@exemple.com"
+                  placeholder="votre@email.com"
                   required
                 />
               </div>
