@@ -278,11 +278,12 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   filterRow: {
-    paddingBottom: 12,
+    height: 52,
+    paddingBottom: 8,
   },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: 20,
     backgroundColor: '#2a2a3e',
     borderWidth: 1,
